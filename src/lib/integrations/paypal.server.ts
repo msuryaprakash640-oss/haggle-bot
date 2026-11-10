@@ -44,7 +44,9 @@ export function getPaymentProvider(): PaymentProvider | null {
     return { id: data.id, status: data.status, amount: Number(amount?.value ?? 0), currency: amount?.currency_code ?? "", approveUrl: sandboxApproveUrl(raw), raw };
   }
   return {
-    createOrder: input => request("/v2/checkout/orders", { method: "POST", headers: { "PayPal-Request-Id": `create-${input.referenceId}`, Prefer: "return=representation" }, body: JSON.stringify({ intent: "CAPTURE", purchase_units: [{ reference_id: input.referenceId, description: `Sandbox only · ${input.description}`.slice(0, 127), amount: { currency_code: input.currency, value: input.amount.toFixed(2) } }], payment_source: { paypal: { experience_context: { shipping_preference: "NO_SHIPPING", user_action: "PAY_NOW" } } } }) }),
+    createOrder: input => request("/v2/checkout/orders", { method: "POST", headers: { "PayPal-Request-Id": `create-${input.referenceId}`, Prefer: "return=representation" }, body: JSON.stringify({ intent: "CAPTURE", purchase_units: [{ reference_id: input.referenceId, description: `Sandbox only · ${input.description}`.slice(0, 127), amount: { currency_code: input.currency, value: input.amount.toFixed(2) } }], // No payment_source: that switches PayPal to the redirect flow (PAYER_ACTION_REQUIRED, needs
+      // return/cancel URLs), which conflicts with the JS SDK popup the app uses.
+      application_context: { shipping_preference: "NO_SHIPPING", user_action: "PAY_NOW" } }) }),
     captureOrder: (id, requestId) => request(`/v2/checkout/orders/${encodeURIComponent(id)}/capture`, { method: "POST", headers: { "PayPal-Request-Id": `capture-${requestId}`, Prefer: "return=representation" }, body: "{}" }),
     getOrder: id => request(`/v2/checkout/orders/${encodeURIComponent(id)}`),
   };
