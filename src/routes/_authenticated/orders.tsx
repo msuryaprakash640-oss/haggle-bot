@@ -1,0 +1,11 @@
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useUserOrders } from "@/hooks/use-haggle-api";
+import { Button } from "@/components/ui/button";
+export const Route = createFileRoute("/_authenticated/orders")({
+  head: () => ({ meta: [{ title: "Your Orders — Haggle Bot" }, { name: "description", content: "View your personal Haggle Bot orders and payment status." }, { property: "og:title", content: "Your Orders — Haggle Bot" }, { property: "og:description", content: "Your purchases and payment status." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" }] }),
+  component: Orders,
+});
+function Orders() {
+  const query = useUserOrders();
+  return <section className="mx-auto max-w-5xl px-4 py-16"><h1 className="font-display text-3xl font-bold">Your orders</h1><p className="mt-3 text-sm text-muted-foreground">PayPal payments here are Sandbox tests only. No retailer purchases or deliveries.</p>{query.isPending && <p role="status" className="mt-8">Loading orders…</p>}{query.error && <div role="alert" className="mt-8"><p>{query.error.message}</p><Button variant="neon" onClick={() => query.refetch()} className="mt-3">Retry</Button></div>}{query.data && <div className="mt-8 space-y-4">{query.data.orders.length === 0 && <p className="text-muted-foreground">No orders yet.</p>}{query.data.orders.map(order => <article key={order.id} className="rounded-lg border border-border bg-card p-5"><h2 className="font-display font-semibold">{order.productName ?? "Order"}</h2><div className="mt-2 flex flex-wrap justify-between gap-3 text-sm"><span>{order.currency} {order.approvedPrice.toFixed(2)}</span><span className="text-secondary">{order.paymentStatus}</span><time className="text-muted-foreground">{new Date(order.createdAt).toLocaleDateString()}</time></div>{order.transactionId && <p className="mt-3 break-all text-xs text-muted-foreground">Sandbox transaction: {order.transactionId}</p>}{order.hasProviderOrder && <Button asChild variant="glass" className="mt-4"><Link to="/payment-confirmation" search={{ orderId: order.id }}>Verify Sandbox payment</Link></Button>}</article>)}</div>}</section>;
+}

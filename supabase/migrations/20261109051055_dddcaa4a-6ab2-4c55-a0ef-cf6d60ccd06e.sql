@@ -1,0 +1,2 @@
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS paypal_capture_id text;
+CREATE UNIQUE INDEX IF NOT EXISTS orders_paypal_capture_id_unique ON public.orders (paypal_capture_id) WHERE paypal_capture_id IS NOT NULL;
