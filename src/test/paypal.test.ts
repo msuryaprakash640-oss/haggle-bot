@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { listedCheckoutPrice, verifiedCapture } from "../lib/paypal-validation";
-import { getPaymentProvider } from "../lib/integrations/paypal.server";
+import { getPaymentProvider, sandboxApproveUrl } from "../lib/integrations/paypal.server";
 
 const expected = { providerId: "paypal-order", referenceId: "local-order", amount: 11.79, currency: "USD" };
 const completed = () => ({ id: "paypal-order", status: "COMPLETED", purchase_units: [{ reference_id: "local-order", payments: { captures: [{ id: "capture-id", status: "COMPLETED", final_capture: true, amount: { currency_code: "USD", value: "11.79" } }] } }] });
@@ -32,6 +32,11 @@ describe("PayPal Sandbox payment rules", () => {
     capture.status = "COMPLETED";
     capture.final_capture = false;
     expect(verifiedCapture(response, expected)).toBeNull();
+  });
+  it("returns only PayPal Sandbox approval links", () => {
+    expect(sandboxApproveUrl({ links: [{ rel: "payer-action", href: "https://www.sandbox.paypal.com/checkoutnow?token=ABC" }] })).toBe("https://www.sandbox.paypal.com/checkoutnow?token=ABC");
+    expect(sandboxApproveUrl({ links: [{ rel: "payer-action", href: "https://www.paypal.com/checkoutnow?token=ABC" }] })).toBeUndefined();
+    expect(sandboxApproveUrl({ links: [] })).toBeUndefined();
   });
   it("reuses the same capture idempotency key on retries and uses only gateway calls", async () => {
     vi.stubEnv("PAYPAL_API_KEY", "test-key"); vi.stubEnv("LOVABLE_API_KEY", "test-app-key");
