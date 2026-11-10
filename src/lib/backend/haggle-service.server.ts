@@ -616,10 +616,14 @@ export function createPaypalOrder(ctx: AuthCtx, input: unknown) {
     }
     if (!order) return fail("INVALID_STATE", "Please retry checkout.");
     if (order.approved_price !== price.amount || order.currency.trim() !== price.currency) return fail("INVALID_STATE", "The retailer price changed. Start a new checkout.");
-    if (order.paypal_order_id) return ok({ order: orderDto(order), approveUrl: null });
+    if (order.paypal_order_id) {
+      const existing = await provider.getOrder(order.paypal_order_id);
+      return ok({ order: orderDto(order), approveUrl: (existing.approveUrl ?? null) as string | null });
+    }
     const po = await provider.createOrder({ referenceId: order.id, amount: price.amount, currency: price.currency, description: offer.products.product_name });
+    if (po.amount !== price.amount || po.currency !== price.currency) return fail("PAYMENT_VERIFICATION_FAILED", "PayPal returned a different amount. Nothing was charged.");
     const saved = must(await ctx.admin.from("orders").update({ paypal_order_id: po.id }).eq("id", order.id).eq("user_id", ctx.userId).eq("payment_status", "pending").select("*").single(), "save provider order");
-    return ok({ order: orderDto(saved), approveUrl: null });
+    return ok({ order: orderDto(saved), approveUrl: (po.approveUrl ?? null) as string | null });
   });
 }
 

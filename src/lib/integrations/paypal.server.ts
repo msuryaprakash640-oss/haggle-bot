@@ -17,6 +17,14 @@ export interface PaymentProvider {
   getOrder(providerOrderId: string): Promise<ProviderOrder>;
 }
 
+/** Buyer approval link, only when it points at PayPal Sandbox. */
+export function sandboxApproveUrl(raw: unknown): string | undefined {
+  const links = (raw as { links?: Array<{ rel?: unknown; href?: unknown }> } | null)?.links;
+  const href = links?.find(l => l.rel === "payer-action" || l.rel === "approve")?.href;
+  if (typeof href !== "string") return undefined;
+  try { return new URL(href).host === "www.sandbox.paypal.com" ? href : undefined; } catch { return undefined; }
+}
+
 export function getPaymentProvider(): PaymentProvider | null {
   const key = process.env["PAYPAL_API_KEY"];
   const appKey = process.env["LOVABLE_API_KEY"];
@@ -33,7 +41,7 @@ export function getPaymentProvider(): PaymentProvider | null {
     const data = paypalResponseSchema.parse(raw);
     const unit = data.purchase_units[0];
     const amount = unit?.payments?.captures?.[0]?.amount ?? unit?.amount;
-    return { id: data.id, status: data.status, amount: Number(amount?.value ?? 0), currency: amount?.currency_code ?? "", raw };
+    return { id: data.id, status: data.status, amount: Number(amount?.value ?? 0), currency: amount?.currency_code ?? "", approveUrl: sandboxApproveUrl(raw), raw };
   }
   return {
     createOrder: input => request("/v2/checkout/orders", { method: "POST", headers: { "PayPal-Request-Id": `create-${input.referenceId}`, Prefer: "return=representation" }, body: JSON.stringify({ intent: "CAPTURE", purchase_units: [{ reference_id: input.referenceId, description: `Sandbox only · ${input.description}`.slice(0, 127), amount: { currency_code: input.currency, value: input.amount.toFixed(2) } }], payment_source: { paypal: { experience_context: { shipping_preference: "NO_SHIPPING", user_action: "PAY_NOW" } } } }) }),
