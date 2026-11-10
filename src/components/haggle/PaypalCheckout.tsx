@@ -56,7 +56,7 @@ export function PaypalCheckout({ offerId, budget, price, currency }: { offerId: 
           } catch (e) { setError(e instanceof Error ? e.message : "Payment verification failed. Check Your orders before retrying."); }
         },
         onCancel: () => setError("Payment cancelled. No payment was captured; the order remains unpaid."),
-        onError: (err) => setError(previous => previous ?? "PayPal checkout failed. No payment was marked paid. Check Your orders before retrying."),
+        onError: (err) => { console.warn("PayPal Sandbox checkout error", err); setError(previous => previous ?? "PayPal checkout failed. No payment was marked paid. Check Your orders before retrying."); },
       });
       void buttons.render(container.current).catch(() => setError("PayPal could not display checkout. Please retry."));
     };
