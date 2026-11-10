@@ -14,6 +14,7 @@ import { listedCheckoutPrice, verifiedCapture } from "../paypal-validation";
 import { getPaymentProvider, type ProviderOrder } from "../integrations/paypal.server";
 import { isDemoProduct, searchExternalProducts, getExternalProduct, ProductSearchError } from "../integrations/product-search.server";
 import { saveChannel3Product } from "./channel3-catalog.server";
+import { channel3OfferId } from "../channel3-offer-id";
 import { eligibleOffers, isAvailable, offerSummary } from "../channel3";
 import {
   money,
@@ -287,7 +288,8 @@ export function comparePrices(ctx: PublicCtx, input: unknown) {
     if (product.external_product_id?.startsWith("channel3:")) {
       const live = await getExternalProduct(product.external_product_id, p.data.currency);
       await saveChannel3Product(live, p.data.currency);
-      const offers = live.offers.filter((o) => o.currency === p.data.currency).sort((a, b) => a.price - b.price).map((o, i) => ({ ...o, id: `${live.externalId}:${i}`, simulated: false }));
+      // Saved offers (known availability) use their stored UUID so checkout can load the trusted row.
+      const offers = await Promise.all(live.offers.filter((o) => o.currency === p.data.currency).sort((a, b) => a.price - b.price).map(async (o, i) => ({ ...o, id: o.availability !== null ? await channel3OfferId(live.externalId, o) : `${live.externalId}:unsaved:${i}`, simulated: false })));
       const summary = offerSummary(live.offers, p.data.currency);
       const best = offers.find((o) => isAvailable(o.availability));
       return ok({ product: { id: product.id, name: live.name, brand: live.brand, imageUrl: live.imageUrl, isDemo: false }, offers, bestOfferId: best?.id ?? null, lowestPrice: summary.lowest, highestPrice: summary.highest, potentialSavings: summary.savings });

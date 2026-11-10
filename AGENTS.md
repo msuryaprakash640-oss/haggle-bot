@@ -39,7 +39,7 @@ use the editor.
 - Budget protection is also enforced in the DB (opening_offer CHECK, validate_order trigger) so no layer can record a deal above the user's budget.
 - Haggle UI pieces live in `src/components/haggle/`; animations use `motion` and confetti is dynamically imported client-side.
 - Channel3 requests extend the existing search/compare server functions; only validated provider data may be saved with service-role access, never browser-supplied catalog rows.
-- Channel3 offer IDs use a deterministic UUID from product, currency, retailer and stable offer identity to avoid concurrent duplicates without schema changes; unavailable or unknown availability is not fabricated.
+- Channel3 offer IDs use one shared deterministic UUID helper (`channel3-offer-id.ts`) from product, currency, retailer and stable offer identity, and live comparisons return that same stored ID, so checkout can load the trusted row; unavailable or unknown availability is not fabricated.
 - Live discovery is separate from simulated negotiation and uses supported native currencies without exchange-rate conversion; provider failures never silently return demo results.
 - Temporary search limiting is per-worker best effort only, not durable shared state or an abuse-prevention guarantee.
 - Gemini assistance uses separate authenticated TanStack server functions and existing negotiation tables; verified Channel3 rows are read-only context, and Gemini sessions never enter deal-found/payment states. This isolates advice from existing catalog, demo and PayPal behavior.
